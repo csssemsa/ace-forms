@@ -1,0 +1,52 @@
+/* Importar Sistema de Design */
+@import './globals.css';
+
+/* Leaflet CSS */
+@import 'leaflet/dist/leaflet.css';
+@import 'leaflet-routing-machine/dist/leaflet-routing-machine.css';
+
+/* Tailwind CSS */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-secondary text-slate-900;
+  }
+}
+
+/* Cores do SUS para Tailwind */
+@layer utilities {
+  .bg-sus-blue {
+    background-color: var(--primary-blue);
+  }
+
+  .bg-sus-green {
+    background-color: var(--success-green);
+  }
+
+  .text-sus-blue {
+    color: var(--primary-blue);
+  }
+
+  .text-sus-green {
+    color: var(--success-green);
+  }
+
+  .border-sus-blue {
+    border-color: var(--primary-blue);
+  }
+
+  .hover\:bg-sus-blue-dark:hover {
+    background-color: var(--primary-blue-dark);
+  }
+
+  .hover\:bg-sus-green-dark:hover {
+    background-color: var(--success-green-dark);
+  }
+
+  .focus\:ring-sus-blue:focus {
+    --tw-ring-color: var(--primary-blue);
+  }
+}
