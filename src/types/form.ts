@@ -41,6 +41,9 @@ export type VisitMotive =
     | 'orientacao_prevencao'
     | 'outros';
 
+// Importar tipos de controle vetorial
+import type { Deposito, Larvicida, ClassificacaoImovel } from './controle-vetorial';
+
 export interface Visit {
     id: string;
     shift: 'morning' | 'afternoon' | 'night';
@@ -66,6 +69,10 @@ export interface Visit {
     neighborhood?: string;
     city?: string;
 
+    // NOVO: Identificação Geográfica Aprimorada
+    setor?: string;          // Setor censitário
+    quarteirão?: string;      // Quadra/Quarteirão
+
     // Campos para ponto estratégico
     strategicPointType?: StrategicPointType;
     responsibleName?: string;
@@ -85,6 +92,18 @@ export interface Visit {
 
     // Motivos da visita
     motives: VisitMotive[];
+
+    // NOVO: Controle Vetorial Detalhado
+    controleVetorial?: {
+        depositosInspecionados: Deposito[];
+        depositosEliminados: number;
+        depositosTratados: number;
+        larvicidaUtilizado?: Larvicida;
+        dosagem?: string;
+        classificacaoImovel: ClassificacaoImovel;
+        motivoRecusa?: string;
+        observacoes?: string;
+    };
 }
 
 export interface VisitationFormHeader {

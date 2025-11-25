@@ -2,6 +2,7 @@ import React from 'react';
 import { Users, Search, Edit2, Trash2, X, Save } from 'lucide-react';
 import { getAllCitizens, updateCitizen, deleteCitizen, type Citizen } from '../services/citizenService';
 import { getUFs, getMunicipiosByUF, type UF, type Municipio } from '../services/ibgeService';
+import { toast } from 'sonner';
 
 export const CitizenManagement: React.FC = () => {
     const [citizens, setCitizens] = React.useState<Citizen[]>([]);
@@ -126,12 +127,12 @@ export const CitizenManagement: React.FC = () => {
 
             const success = updateCitizen(editingCitizen.cns, updatedData);
             if (success) {
-                alert('Cidadão atualizado com sucesso!');
+                toast.success('Cidadão atualizado com sucesso!');
                 loadCitizens();
                 setEditingCitizen(null);
                 setEditForm({});
             } else {
-                alert('Erro ao atualizar cidadão');
+                toast.error('Erro ao atualizar cidadão');
             }
         }
     };
@@ -140,10 +141,10 @@ export const CitizenManagement: React.FC = () => {
         if (confirm(`Tem certeza que deseja excluir ${name}?`)) {
             const success = deleteCitizen(cns);
             if (success) {
-                alert('Cidadão excluído com sucesso!');
+                toast.success('Cidadão excluído com sucesso!');
                 loadCitizens();
             } else {
-                alert('Não é possível excluir cidadãos pré-cadastrados');
+                toast.error('Não é possível excluir cidadãos pré-cadastrados');
             }
         }
     };

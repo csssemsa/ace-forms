@@ -2,6 +2,10 @@ import React from 'react';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { Save, User, MapPin, FileBadge, Lock, CreditCard } from 'lucide-react';
 import { formatCPF } from '../utils/masks';
+import { toast } from 'sonner';
+import { Button } from './ui/Button';
+import { Input } from './ui/Input';
+import { Card, CardHeader, CardTitle, CardContent } from './ui/Card';
 
 interface ProfessionalFormData {
     name: string;
@@ -16,40 +20,25 @@ export const ProfessionalForm: React.FC<{ onSave?: () => void }> = ({ onSave }) 
 
     const onSubmit: SubmitHandler<ProfessionalFormData> = (data) => {
         try {
-            console.log('=== DEBUG CADASTRO ===');
-            console.log('Dados do formulário:', data);
-            
-            // Get existing users
             const existingUsersStr = localStorage.getItem('ace_users');
             const existingUsers = existingUsersStr ? JSON.parse(existingUsersStr) : [];
-            
-            console.log('Usuários existentes:', existingUsers);
-            console.log('CPFs cadastrados:', existingUsers.map((u: any) => u.cpf));
 
-            // Check if CPF already exists
             const cpfExists = existingUsers.some((u: any) => u.cpf === data.cpf);
-            console.log('CPF já existe?', cpfExists, '(procurando:', data.cpf, ')');
-            
+
             if (cpfExists) {
-                alert('CPF já cadastrado!');
+                toast.error('CPF já cadastrado!');
                 return;
             }
 
-            // Save new user
             const newUser = { ...data, id: crypto.randomUUID(), role: 'user' };
-            console.log('Novo usuário a ser salvo:', newUser);
-            
             const updatedUsers = [...existingUsers, newUser];
             localStorage.setItem('ace_users', JSON.stringify(updatedUsers));
-            
-            console.log('Usuários após salvar:', updatedUsers);
-            console.log('localStorage atualizado!');
 
-            alert('Profissional cadastrado com sucesso! Você já pode fazer login.');
+            toast.success('Profissional cadastrado com sucesso! Você já pode fazer login.');
             if (onSave) onSave();
         } catch (error) {
             console.error('Erro ao salvar:', error);
-            alert('Erro ao salvar dados.');
+            toast.error('Erro ao salvar dados.');
         }
     };
 
@@ -59,61 +48,48 @@ export const ProfessionalForm: React.FC<{ onSave?: () => void }> = ({ onSave }) 
     };
 
     return (
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-8 p-4 max-w-2xl mx-auto bg-white shadow-lg rounded-lg my-8">
-            <div className="bg-sus-blue text-white p-6 rounded-t-lg -m-4 mb-4">
-                <div className="flex items-center gap-3 mb-2">
-                    <User className="w-8 h-8" />
-                    <h1 className="text-2xl font-bold">Cadastro de Profissional (ACE)</h1>
-                </div>
-                <p className="opacity-90 text-sm">Cadastre os dados do Agente de Combate a Endemias</p>
-            </div>
-
-            <div className="space-y-4">
-                <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1 flex items-center gap-2">
-                        <User className="w-4 h-4 text-sus-blue" />
-                        Nome do Profissional
-                    </label>
-                    <input
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-8 max-w-3xl mx-auto my-8 px-4 sm:px-6">
+            <Card className="border-t-4 border-t-sus-blue">
+                <CardHeader className="bg-white border-b-0 pb-0">
+                    <div className="flex items-center gap-3 mb-2">
+                        <div className="p-2 bg-blue-50 rounded-lg">
+                            <User className="w-6 h-6 text-sus-blue" />
+                        </div>
+                        <div>
+                            <CardTitle>Cadastro de Profissional ACE</CardTitle>
+                            <p className="text-sm text-slate-500">Cadastre os dados do Agente de Combate a Endemias</p>
+                        </div>
+                    </div>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                    <Input
+                        label="Nome do Profissional"
+                        icon={<User className="w-4 h-4" />}
                         {...register("name", { required: "Nome é obrigatório" })}
-                        className="w-full p-2 border rounded focus:ring-2 focus:ring-sus-blue focus:border-sus-blue outline-none transition-all"
                         placeholder="Nome completo do ACE"
+                        error={errors.name?.message}
                     />
-                    {errors.name && <span className="text-red-500 text-xs">{errors.name.message}</span>}
-                </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1 flex items-center gap-2">
-                            <CreditCard className="w-4 h-4 text-sus-blue" />
-                            CPF (Usuário)
-                        </label>
-                        <input
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <Input
+                            label="CPF"
+                            icon={<CreditCard className="w-4 h-4" />}
                             {...register("cpf", {
                                 required: "CPF é obrigatório",
-                                minLength: { value: 14, message: "CPF incompleto" },
-                                pattern: {
-                                    value: /^\d{3}\.\d{3}\.\d{3}-\d{2}$/,
-                                    message: "Formato inválido (000.000.000-00)"
-                                },
                                 validate: (value) => {
                                     const cleanCPF = value.replace(/\D/g, '');
                                     return cleanCPF.length === 11 || "CPF deve ter 11 dígitos";
-                                },
-                                onChange: handleCPFChange
+                                }
                             })}
+                            onChange={handleCPFChange}
                             maxLength={14}
-                            className="w-full p-2 border rounded focus:ring-2 focus:ring-sus-blue focus:border-sus-blue outline-none transition-all"
                             placeholder="000.000.000-00"
+                            error={errors.cpf?.message}
                         />
-                        {errors.cpf && <span className="text-red-500 text-xs">{errors.cpf.message}</span>}
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1 flex items-center gap-2">
-                            <FileBadge className="w-4 h-4 text-sus-blue" />
-                            CNS
-                        </label>
-                        <input
+
+                        <Input
+                            label="CNS (Cartão SUS)"
+                            icon={<FileBadge className="w-4 h-4" />}
                             {...register("cns", {
                                 required: "CNS é obrigatório",
                                 minLength: { value: 15, message: "CNS deve ter 15 dígitos" },
@@ -121,53 +97,44 @@ export const ProfessionalForm: React.FC<{ onSave?: () => void }> = ({ onSave }) 
                                 pattern: { value: /^\d+$/, message: "Apenas números" }
                             })}
                             maxLength={15}
-                            className="w-full p-2 border rounded focus:ring-2 focus:ring-sus-blue focus:border-sus-blue outline-none transition-all"
-                            placeholder="Número do CNS"
-                            onInput={(e) => {
-                                e.currentTarget.value = e.currentTarget.value.replace(/\D/g, '').slice(0, 15);
-                            }}
+                            placeholder="000000000000000"
+                            error={errors.cns?.message}
                         />
-                        {errors.cns && <span className="text-red-500 text-xs">{errors.cns.message}</span>}
                     </div>
-                </div>
 
-                <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1 flex items-center gap-2">
-                        <MapPin className="w-4 h-4 text-sus-blue" />
-                        Microárea
-                    </label>
-                    <input
-                        {...register("microArea", { required: "Microárea é obrigatória" })}
-                        className="w-full p-2 border rounded focus:ring-2 focus:ring-sus-blue focus:border-sus-blue outline-none transition-all"
-                        placeholder="Código da Microárea"
-                    />
-                    {errors.microArea && <span className="text-red-500 text-xs">{errors.microArea.message}</span>}
-                </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <Input
+                            label="Microárea"
+                            icon={<MapPin className="w-4 h-4" />}
+                            {...register("microArea", { required: "Microárea é obrigatória" })}
+                            placeholder="Ex: 01"
+                            error={errors.microArea?.message}
+                        />
 
-                <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1 flex items-center gap-2">
-                        <Lock className="w-4 h-4 text-sus-blue" />
-                        Senha
-                    </label>
-                    <input
-                        type="password"
-                        {...register("password", { required: "Senha é obrigatória", minLength: { value: 6, message: "Mínimo 6 caracteres" } })}
-                        className="w-full p-2 border rounded focus:ring-2 focus:ring-sus-blue focus:border-sus-blue outline-none transition-all"
-                        placeholder="******"
-                    />
-                    {errors.password && <span className="text-red-500 text-xs">{errors.password.message}</span>}
-                </div>
-            </div>
+                        <Input
+                            label="Senha"
+                            type="password"
+                            icon={<Lock className="w-4 h-4" />}
+                            {...register("password", {
+                                required: "Senha é obrigatória",
+                                minLength: { value: 6, message: "Senha deve ter no mínimo 6 caracteres" }
+                            })}
+                            placeholder="******"
+                            error={errors.password?.message}
+                        />
+                    </div>
 
-            <div className="pt-4 border-t flex justify-end">
-                <button
-                    type="submit"
-                    className="flex items-center gap-2 bg-sus-green hover:bg-green-700 text-white px-6 py-2 rounded font-medium shadow-md transition-colors"
-                >
-                    <Save className="w-5 h-5" />
-                    Salvar Cadastro
-                </button>
-            </div>
+                    <div className="flex justify-end pt-4 border-t">
+                        <Button
+                            type="submit"
+                            className="bg-sus-green hover:bg-green-700 text-white w-full sm:w-auto"
+                        >
+                            <Save className="w-5 h-5 mr-2" />
+                            Cadastrar Profissional
+                        </Button>
+                    </div>
+                </CardContent>
+            </Card>
         </form>
     );
 };

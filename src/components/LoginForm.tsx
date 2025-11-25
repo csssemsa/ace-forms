@@ -1,55 +1,57 @@
-import React from 'react';
-import { useForm, type SubmitHandler } from 'react-hook-form';
-import { LogIn, Lock, CreditCard } from 'lucide-react';
-import { formatCPF } from '../utils/masks';
+import React, { useState } from 'react';
+import { Lock, CreditCard, LogIn } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
+import { Button } from './ui/Button';
+import { Input } from './ui/Input';
 
-interface LoginFormData {
-    cpf: string;
-    password: string;
-}
+export const LoginForm: React.FC = () => {
+    const { login } = useAuth();
+    const navigate = useNavigate();
+    const [cpf, setCpf] = useState('');
+    const [password, setPassword] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
 
-interface LoginFormProps {
-    onLoginSuccess: (user: any) => void;
-}
-
-export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
-    const { register, handleSubmit, setError, setValue, formState: { errors } } = useForm<LoginFormData>();
-
-    const onSubmit: SubmitHandler<LoginFormData> = (data) => {
-        try {
-            const existingUsersStr = localStorage.getItem('ace_users');
-            const existingUsers = existingUsersStr ? JSON.parse(existingUsersStr) : [];
-
-            console.log('=== DEBUG LOGIN ===');
-            console.log('CPF digitado:', data.cpf);
-            console.log('Senha digitada:', data.password);
-            console.log('Total de usuários:', existingUsers.length);
-            console.table(existingUsers.map((u: any) => ({
-                nome: u.name,
-                cpf: u.cpf,
-                senha: u.password,
-                role: u.role
-            })));
-
-            // Comparação exata de CPF e senha
-            const user = existingUsers.find((u: any) => u.cpf === data.cpf && u.password === data.password);
-
-            console.log('Usuário encontrado:', user ? user.name : 'NENHUM');
-
-            if (user) {
-                onLoginSuccess(user);
-            } else {
-                setError('root', { message: 'CPF ou senha inválidos' });
-            }
-        } catch (error) {
-            console.error(error);
-            setError('root', { message: 'Erro ao tentar fazer login' });
-        }
+    const formatCPF = (value: string) => {
+        return value
+            .replace(/\D/g, '')
+            .replace(/(\d{3})(\d)/, '$1.$2')
+            .replace(/(\d{3})(\d)/, '$1.$2')
+            .replace(/(\d{3})(\d{1,2})/, '$1-$2')
+            .replace(/(-\d{2})\d+?$/, '$1');
     };
 
     const handleCPFChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const formatted = formatCPF(e.target.value);
-        setValue('cpf', formatted);
+        setCpf(formatted);
+    };
+
+    const handleLogin = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsLoading(true);
+
+        // Simular delay de rede
+        await new Promise(resolve => setTimeout(resolve, 800));
+
+        try {
+            const usersStr = localStorage.getItem('ace_users');
+            const users = usersStr ? JSON.parse(usersStr) : [];
+
+            const user = users.find((u: any) => u.cpf === cpf && u.password === password);
+
+            if (user) {
+                login(user);
+                toast.success(`Bem-vindo, ${user.name}!`);
+                navigate('/');
+            } else {
+                toast.error('CPF ou senha inválidos');
+            }
+        } catch (err) {
+            toast.error('Erro ao realizar login');
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (
@@ -60,65 +62,51 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
                     <p className="text-slate-500">e-SUS APS - Ficha de Visita</p>
                 </div>
 
-                <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1 flex items-center gap-2">
-                            <CreditCard className="w-4 h-4 text-sus-blue" />
-                            CPF
-                        </label>
-                        <input
-                            {...register("cpf", {
-                                required: "CPF é obrigatório",
-                                onChange: handleCPFChange
-                            })}
-                            maxLength={14}
-                            className="w-full p-2 border rounded focus:ring-2 focus:ring-sus-blue focus:border-sus-blue outline-none transition-all"
-                            placeholder="000.000.000-00"
-                        />
-                        {errors.cpf && <span className="text-red-500 text-xs">{errors.cpf.message}</span>}
-                    </div>
+                <form onSubmit={handleLogin} className="space-y-6">
+                    <Input
+                        label="CPF"
+                        icon={<CreditCard className="w-4 h-4" />}
+                        value={cpf}
+                        onChange={handleCPFChange}
+                        maxLength={14}
+                        required
+                        placeholder="000.000.000-00"
+                    />
 
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1 flex items-center gap-2">
-                            <Lock className="w-4 h-4 text-sus-blue" />
-                            Senha
-                        </label>
-                        <input
-                            type="password"
-                            {...register("password", { required: "Senha é obrigatória" })}
-                            className="w-full p-2 border rounded focus:ring-2 focus:ring-sus-blue focus:border-sus-blue outline-none transition-all"
-                            placeholder="******"
-                        />
-                        {errors.password && <span className="text-red-500 text-xs">{errors.password.message}</span>}
-                    </div>
+                    <Input
+                        label="Senha"
+                        type="password"
+                        icon={<Lock className="w-4 h-4" />}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                        placeholder="******"
+                    />
 
-                    {errors.root && (
-                        <div className="p-3 bg-red-50 text-red-600 text-sm rounded border border-red-100 text-center">
-                            {errors.root.message}
-                        </div>
-                    )}
-
-                    <button
+                    <Button
                         type="submit"
-                        className="w-full flex justify-center items-center gap-2 bg-sus-blue hover:bg-blue-700 text-white px-4 py-3 rounded font-medium shadow-md transition-colors"
+                        isLoading={isLoading}
+                        className="w-full"
                     >
-                        <LogIn className="w-5 h-5" />
+                        <LogIn className="w-5 h-5 mr-2" />
                         Entrar
-                    </button>
+                    </Button>
                 </form>
 
                 <div className="mt-4 text-center">
-                    <button
+                    <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={() => {
                             if (confirm('Isso irá apagar todos os dados salvos localmente. Deseja continuar?')) {
                                 localStorage.clear();
                                 window.location.reload();
                             }
                         }}
-                        className="text-xs text-slate-400 hover:text-slate-600 underline"
+                        className="text-slate-400 hover:text-slate-600 underline"
                     >
                         Resetar dados do sistema
-                    </button>
+                    </Button>
                 </div>
             </div>
         </div>

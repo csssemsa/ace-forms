@@ -1,97 +1,48 @@
 import React from 'react';
+import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
 
-export interface CardProps {
-    children: React.ReactNode;
-    className?: string;
-    padding?: 'none' | 'sm' | 'md' | 'lg';
-    shadow?: 'none' | 'sm' | 'md' | 'lg';
-    hover?: boolean;
-    onClick?: () => void;
+function cn(...inputs: ClassValue[]) {
+    return twMerge(clsx(inputs));
 }
 
-export const Card: React.FC<CardProps> = ({
-    children,
-    className = '',
-    padding = 'md',
-    shadow = 'md',
-    hover = false,
-    onClick
-}) => {
-    const paddingStyles = {
-        none: '',
-        sm: 'p-4',
-        md: 'p-6',
-        lg: 'p-8'
-    };
+interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
+    noPadding?: boolean;
+}
 
-    const shadowStyles = {
-        none: '',
-        sm: 'shadow-sm',
-        md: 'shadow-md',
-        lg: 'shadow-lg'
-    };
-
+export const Card: React.FC<CardProps> = ({ className, children, noPadding = false, ...props }) => {
     return (
         <div
-            className={`
-        bg-white
-        rounded-lg
-        border border-gray-200
-        ${paddingStyles[padding]}
-        ${shadowStyles[shadow]}
-        ${hover ? 'hover:shadow-lg transition-shadow duration-200 cursor-pointer' : ''}
-        ${className}
-      `.trim().replace(/\s+/g, ' ')}
-            onClick={onClick}
+            className={cn(
+                'bg-white rounded-lg shadow-md border border-slate-100 overflow-hidden',
+                className
+            )}
+            {...props}
         >
+            <div className={cn(!noPadding && 'p-6')}>{children}</div>
+        </div>
+    );
+};
+
+export const CardHeader: React.FC<React.HTMLAttributes<HTMLDivElement>> = ({ className, children, ...props }) => {
+    return (
+        <div className={cn('px-6 py-4 border-b border-slate-100 bg-slate-50/50', className)} {...props}>
             {children}
         </div>
     );
 };
 
-export interface CardHeaderProps {
-    children: React.ReactNode;
-    className?: string;
-}
-
-export const CardHeader: React.FC<CardHeaderProps> = ({ children, className = '' }) => {
+export const CardTitle: React.FC<React.HTMLAttributes<HTMLHeadingElement>> = ({ className, children, ...props }) => {
     return (
-        <div className={`border-b border-gray-200 pb-4 mb-4 ${className}`}>
-            {children}
-        </div>
-    );
-};
-
-export interface CardTitleProps {
-    children: React.ReactNode;
-    className?: string;
-}
-
-export const CardTitle: React.FC<CardTitleProps> = ({ children, className = '' }) => {
-    return (
-        <h3 className={`text-lg font-semibold text-gray-900 ${className}`}>
+        <h3 className={cn('text-lg font-semibold text-slate-800', className)} {...props}>
             {children}
         </h3>
     );
 };
 
-export interface CardContentProps {
-    children: React.ReactNode;
-    className?: string;
-}
-
-export const CardContent: React.FC<CardContentProps> = ({ children, className = '' }) => {
-    return <div className={className}>{children}</div>;
-};
-
-export interface CardFooterProps {
-    children: React.ReactNode;
-    className?: string;
-}
-
-export const CardFooter: React.FC<CardFooterProps> = ({ children, className = '' }) => {
+export const CardContent: React.FC<React.HTMLAttributes<HTMLDivElement>> = ({ className, children, ...props }) => {
     return (
-        <div className={`border-t border-gray-200 pt-4 mt-4 ${className}`}>
+        <div className={cn('p-6', className)} {...props}>
             {children}
         </div>
     );
