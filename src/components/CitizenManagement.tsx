@@ -297,22 +297,6 @@ export const CitizenManagement: React.FC = () => {
                                 />
                             </div>
 
-                            <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-2">
-                                    Endereço Completo
-                                </label>
-                                <textarea
-                                    value={editForm.address || ''}
-                                    onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
-                                    className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-sus-blue"
-                                    rows={3}
-                                    placeholder="Endereço será preenchido automaticamente pelos campos abaixo"
-                                />
-                                <p className="text-xs text-gray-500 mt-1">
-                                    💡 Este campo é preenchido automaticamente. Você pode editar manualmente se preferir.
-                                </p>
-                            </div>
-
                             {/* Campos Detalhados de Endereço */}
                             <div className="border-t pt-4 mt-4">
                                 <h4 className="text-sm font-semibold text-slate-700 mb-3">Campos Detalhados de Endereço</h4>
@@ -424,6 +408,23 @@ export const CitizenManagement: React.FC = () => {
                                         </select>
                                     </div>
                                 </div>
+                            </div>
+
+                            {/* Endereço Completo - Após os campos detalhados */}
+                            <div className="border-t pt-4 mt-4">
+                                <label className="block text-sm font-medium text-slate-700 mb-2">
+                                    Endereço Completo
+                                </label>
+                                <textarea
+                                    value={editForm.address || ''}
+                                    onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
+                                    className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-sus-blue"
+                                    rows={3}
+                                    placeholder="Endereço será preenchido automaticamente pelos campos acima"
+                                />
+                                <p className="text-xs text-amber-600 mt-1 flex items-center gap-1">
+                                    <span>💡</span> Este campo é preenchido automaticamente. Você pode editar manualmente se preferir.
+                                </p>
                             </div>
                         </div>
 

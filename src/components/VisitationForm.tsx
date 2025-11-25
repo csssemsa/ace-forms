@@ -227,6 +227,56 @@ export const VisitationForm: React.FC<VisitationFormProps> = ({ user }) => {
         }));
     };
 
+    const handleSearchCEP = async () => {
+        const cep = addressFields.cep.replace(/\D/g, '');
+        if (cep.length !== 8) {
+            toast.error('CEP deve ter 8 dígitos');
+            return;
+        }
+
+        try {
+            const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+            const data = await response.json();
+
+            if (data.erro) {
+                toast.error('CEP não encontrado');
+                return;
+            }
+
+            // Preencher campos automaticamente
+            updateAddressField('logradouro', data.logradouro || '');
+            updateAddressField('bairro', data.bairro || '');
+            
+            // Atualizar UF e município se disponível
+            if (data.uf) {
+                const ufObj = ufs.find(u => u.sigla === data.uf);
+                if (ufObj) {
+                    setNewCitizen(prev => ({ ...prev, uf: data.uf }));
+                    // Carregar municípios do estado
+                    const municipiosData = await getMunicipiosByUF(data.uf);
+                    setMunicipios(municipiosData);
+                    
+                    // Encontrar e selecionar o município
+                    const municipio = municipiosData.find(m => 
+                        m.nome.toLowerCase() === data.localidade?.toLowerCase()
+                    );
+                    if (municipio) {
+                        setNewCitizen(prev => ({
+                            ...prev,
+                            municipioCode: municipio.id.toString(),
+                            municipioName: municipio.nome
+                        }));
+                    }
+                }
+            }
+
+            toast.success('CEP encontrado! Endereço preenchido automaticamente.');
+        } catch (error) {
+            console.error('Erro ao buscar CEP:', error);
+            toast.error('Erro ao buscar CEP');
+        }
+    };
+
     const handleRegisterCitizen = () => {
         if (!newCitizen.cns || !newCitizen.name || !newCitizen.dateOfBirth) {
             toast.error('Preencha todos os campos obrigatórios (CNS, Nome e Data de Nascimento)');
@@ -672,10 +722,10 @@ export const VisitationForm: React.FC<VisitationFormProps> = ({ user }) => {
 
             {/* Modal de Cadastro Rápido */}
             {registerModalOpen && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-                    <Card className="w-full max-w-2xl max-h-[85vh] flex flex-col" noPadding>
-                        <div className="bg-sus-green text-white p-4 flex justify-between items-center shrink-0">
-                            <h2 className="text-xl font-bold flex items-center gap-2">
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[85vh] overflow-y-auto">
+                        <div className="flex justify-between items-center mb-4">
+                            <h2 className="text-xl font-bold text-sus-green flex items-center gap-2">
                                 <UserPlus className="w-6 h-6" />
                                 Cadastrar Novo Cidadão
                             </h2>
@@ -700,111 +750,273 @@ export const VisitationForm: React.FC<VisitationFormProps> = ({ user }) => {
                                         bairro: ''
                                     });
                                 }}
-                                className="text-white hover:bg-white/20 p-1 rounded transition-colors"
+                                className="text-slate-400 hover:text-slate-600"
                             >
                                 <X className="w-6 h-6" />
                             </button>
                         </div>
 
-                        <div className="p-6 space-y-4 overflow-y-auto flex-1">
-                            <Input
-                                label="CNS (Cartão SUS) *"
-                                value={newCitizen.cns}
-                                onChange={(e) => {
-                                    const value = e.target.value.replace(/\D/g, '').slice(0, 15);
-                                    setNewCitizen({ ...newCitizen, cns: value });
-                                }}
-                                placeholder="000000000000000"
-                                maxLength={15}
-                            />
-
-                            <Input
-                                label="Nome Completo *"
-                                value={newCitizen.name}
-                                onChange={(e) => setNewCitizen({ ...newCitizen, name: e.target.value })}
-                                placeholder="Nome completo do cidadão"
-                            />
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <Input
-                                    label="Data de Nascimento *"
-                                    type="date"
-                                    value={newCitizen.dateOfBirth}
-                                    onChange={(e) => setNewCitizen({ ...newCitizen, dateOfBirth: e.target.value })}
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">
+                                    CNS (Cartão SUS) *
+                                </label>
+                                <input
+                                    type="text"
+                                    value={newCitizen.cns}
+                                    onChange={(e) => {
+                                        const value = e.target.value.replace(/\D/g, '').slice(0, 15);
+                                        setNewCitizen({ ...newCitizen, cns: value });
+                                    }}
+                                    placeholder="000000000000000"
+                                    maxLength={15}
+                                    className="w-full p-2 border rounded"
                                 />
+                            </div>
 
-                                <Select
-                                    label="Sexo"
-                                    value={newCitizen.sex}
-                                    onChange={(e) => setNewCitizen({ ...newCitizen, sex: e.target.value as Sex })}
-                                    options={[
-                                        { value: 'M', label: 'Masculino' },
-                                        { value: 'F', label: 'Feminino' }
-                                    ]}
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">
+                                    Nome Completo *
+                                </label>
+                                <input
+                                    type="text"
+                                    value={newCitizen.name}
+                                    onChange={(e) => setNewCitizen({ ...newCitizen, name: e.target.value })}
+                                    placeholder="Nome completo do cidadão"
+                                    className="w-full p-2 border rounded"
                                 />
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <Select
-                                    label="Estado (UF)"
-                                    value={newCitizen.uf}
-                                    onChange={(e) => {
-                                        const newUF = e.target.value;
-                                        setNewCitizen(prev => {
-                                            const municipio = municipios.find(m => m.id.toString() === prev.municipioCode);
-                                            const municipioName = municipio ? municipio.nome : '';
-                                            return {
-                                                ...prev,
-                                                uf: newUF,
-                                                address: buildFullAddress(addressFields, newUF, municipioName)
-                                            };
-                                        });
-                                    }}
-                                    options={[
-                                        { value: '', label: 'Selecione...' },
-                                        ...ufs.map(uf => ({ value: uf.sigla, label: uf.nome }))
-                                    ]}
-                                />
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                                        Data de Nascimento *
+                                    </label>
+                                    <input
+                                        type="date"
+                                        value={newCitizen.dateOfBirth}
+                                        onChange={(e) => setNewCitizen({ ...newCitizen, dateOfBirth: e.target.value })}
+                                        className="w-full p-2 border rounded"
+                                    />
+                                </div>
 
-                                <Select
-                                    label="Município"
-                                    value={newCitizen.municipioCode}
-                                    onChange={(e) => {
-                                        const newCode = e.target.value;
-                                        const municipio = municipios.find(m => m.id.toString() === newCode);
-                                        const municipioName = municipio ? municipio.nome : '';
-                                        setNewCitizen(prev => ({
-                                            ...prev,
-                                            municipioCode: newCode,
-                                            municipioName: municipioName,
-                                            address: buildFullAddress(addressFields, prev.uf || '', municipioName)
-                                        }));
-                                    }}
-                                    disabled={!newCitizen.uf}
-                                    options={[
-                                        { value: '', label: 'Selecione...' },
-                                        ...municipios.map(m => ({ value: m.id.toString(), label: m.nome }))
-                                    ]}
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                                        Sexo
+                                    </label>
+                                    <select
+                                        value={newCitizen.sex}
+                                        onChange={(e) => setNewCitizen({ ...newCitizen, sex: e.target.value as Sex })}
+                                        className="w-full p-2 border rounded"
+                                    >
+                                        <option value="M">Masculino</option>
+                                        <option value="F">Feminino</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            {/* Campos Detalhados de Endereço */}
+                            <div className="border-t pt-4 mt-4">
+                                <h4 className="text-sm font-semibold text-slate-700 mb-3">Campos Detalhados de Endereço</h4>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">
+                                            CEP
+                                        </label>
+                                        <div className="flex gap-2">
+                                            <input
+                                                type="text"
+                                                value={addressFields.cep}
+                                                onChange={(e) => {
+                                                    let value = e.target.value.replace(/\D/g, '');
+                                                    if (value.length > 8) value = value.slice(0, 8);
+                                                    if (value.length > 5) {
+                                                        value = value.slice(0, 5) + '-' + value.slice(5);
+                                                    }
+                                                    updateAddressField('cep', value);
+                                                }}
+                                                className="flex-1 p-2 border rounded-lg focus:ring-2 focus:ring-sus-blue"
+                                                placeholder="00000-000"
+                                                maxLength={9}
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={handleSearchCEP}
+                                                disabled={addressFields.cep.replace(/\D/g, '').length !== 8}
+                                                className="shrink-0 px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 text-sm font-medium"
+                                            >
+                                                <Search className="w-4 h-4" />
+                                                Buscar
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">
+                                            Número
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={addressFields.numero}
+                                            onChange={(e) => updateAddressField('numero', e.target.value)}
+                                            className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-sus-blue"
+                                            placeholder="123"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="mt-4">
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                                        Logradouro (Rua/Avenida)
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={addressFields.logradouro}
+                                        onChange={(e) => updateAddressField('logradouro', e.target.value)}
+                                        className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-sus-blue"
+                                        placeholder="Rua das Flores"
+                                    />
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">
+                                            Complemento
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={addressFields.complemento}
+                                            onChange={(e) => updateAddressField('complemento', e.target.value)}
+                                            className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-sus-blue"
+                                            placeholder="Apto 101, Bloco A"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">
+                                            Bairro
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={addressFields.bairro}
+                                            onChange={(e) => updateAddressField('bairro', e.target.value)}
+                                            className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-sus-blue"
+                                            placeholder="Centro"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">
+                                            Estado (UF)
+                                        </label>
+                                        <select
+                                            value={newCitizen.uf}
+                                            onChange={(e) => {
+                                                const newUF = e.target.value;
+                                                setNewCitizen(prev => {
+                                                    const municipio = municipios.find(m => m.id.toString() === prev.municipioCode);
+                                                    const municipioName = municipio ? municipio.nome : '';
+                                                    return {
+                                                        ...prev,
+                                                        uf: newUF,
+                                                        address: buildFullAddress(addressFields, newUF, municipioName)
+                                                    };
+                                                });
+                                            }}
+                                            className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-sus-blue"
+                                        >
+                                            <option value="">Selecione...</option>
+                                            {ufs.map(uf => (
+                                                <option key={uf.id} value={uf.sigla}>{uf.nome}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">
+                                            Município
+                                        </label>
+                                        <select
+                                            value={newCitizen.municipioCode}
+                                            onChange={(e) => {
+                                                const newCode = e.target.value;
+                                                const municipio = municipios.find(m => m.id.toString() === newCode);
+                                                const municipioName = municipio ? municipio.nome : '';
+                                                setNewCitizen(prev => ({
+                                                    ...prev,
+                                                    municipioCode: newCode,
+                                                    municipioName: municipioName,
+                                                    address: buildFullAddress(addressFields, prev.uf || '', municipioName)
+                                                }));
+                                            }}
+                                            disabled={!newCitizen.uf}
+                                            className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-sus-blue disabled:bg-slate-100 disabled:cursor-not-allowed"
+                                        >
+                                            <option value="">Selecione...</option>
+                                            {municipios.map(m => (
+                                                <option key={m.id} value={m.id.toString()}>{m.nome}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Endereço Completo - Após os campos detalhados */}
+                            <div className="border-t pt-4 mt-4">
+                                <label className="block text-sm font-medium text-slate-700 mb-2">
+                                    Endereço Completo
+                                </label>
+                                <textarea
+                                    value={newCitizen.address}
+                                    onChange={(e) => setNewCitizen({ ...newCitizen, address: e.target.value })}
+                                    className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-sus-blue"
+                                    rows={3}
+                                    placeholder="Endereço será preenchido automaticamente pelos campos acima"
                                 />
+                                <p className="text-xs text-amber-600 mt-1 flex items-center gap-1">
+                                    <span>💡</span> Este campo é preenchido automaticamente. Você pode editar manualmente se preferir.
+                                </p>
                             </div>
                         </div>
 
-                        <div className="p-4 border-t bg-slate-50 flex justify-end gap-3 shrink-0">
-                            <Button
-                                variant="ghost"
-                                onClick={() => setRegisterModalOpen(false)}
+                        <div className="flex gap-2 mt-6">
+                            <button
+                                onClick={() => {
+                                    setRegisterModalOpen(false);
+                                    setNewCitizen({
+                                        cns: '',
+                                        name: '',
+                                        dateOfBirth: '',
+                                        sex: 'M',
+                                        address: '',
+                                        uf: '',
+                                        municipioCode: '',
+                                        municipioName: ''
+                                    });
+                                    setAddressFields({
+                                        cep: '',
+                                        logradouro: '',
+                                        numero: '',
+                                        complemento: '',
+                                        bairro: ''
+                                    });
+                                }}
+                                className="flex-1 bg-slate-300 hover:bg-slate-400 text-slate-700 px-4 py-2 rounded font-medium"
                             >
                                 Cancelar
-                            </Button>
-                            <Button
+                            </button>
+                            <button
                                 onClick={handleRegisterCitizen}
-                                className="bg-sus-green hover:bg-green-700 text-white"
+                                className="flex-1 bg-sus-green hover:bg-green-700 text-white px-4 py-2 rounded font-medium flex items-center justify-center gap-2"
                             >
-                                <Save className="w-5 h-5 mr-2" />
+                                <Save className="w-4 h-4" />
                                 Salvar Cidadão
-                            </Button>
+                            </button>
                         </div>
-                    </Card>
+                    </div>
                 </div>
             )}
         </form>
