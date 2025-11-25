@@ -68,6 +68,7 @@ export const AppLayout: React.FC = () => {
     }, [user]);
 
     // Verificação de user DEPOIS de todos os hooks
+    // Nota: O redirecionamento para login é feito pelo ProtectedRoute no App.tsx
     if (!user) return null;
 
     return (

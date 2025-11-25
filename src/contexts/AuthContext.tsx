@@ -5,12 +5,18 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [user, setUser] = useState<User | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
         // Verificar sessão existente ao carregar
         const sessionUser = localStorage.getItem('ace_session');
         if (sessionUser) {
-            setUser(JSON.parse(sessionUser));
+            try {
+                setUser(JSON.parse(sessionUser));
+            } catch (error) {
+                console.error('Erro ao carregar sessão:', error);
+                localStorage.removeItem('ace_session');
+            }
         }
 
         // Seed Admin User (Lógica migrada do App.tsx)
@@ -31,6 +37,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             localStorage.setItem('ace_users', JSON.stringify(existingUsers));
             console.log('Admin user created: 987.654.321-12 / admin123');
         }
+
+        setIsLoading(false);
     }, []);
 
     const login = (userData: User) => {
@@ -44,7 +52,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     return (
-        <AuthContext.Provider value={{ user, login, logout, isAuthenticated: !!user }}>
+        <AuthContext.Provider value={{ user, login, logout, isAuthenticated: !!user, isLoading }}>
             {children}
         </AuthContext.Provider>
     );
