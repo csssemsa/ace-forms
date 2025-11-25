@@ -29,7 +29,7 @@ interface VisitationFormProps {
 }
 
 export const VisitationForm: React.FC<VisitationFormProps> = ({ user }) => {
-    const { register, control, handleSubmit, setValue, formState: { errors } } = useForm<VisitationFormData>({
+    const { register, control, handleSubmit, setValue, watch, formState: { errors } } = useForm<VisitationFormData>({
         defaultValues: {
             professionalName: user?.name || '',
             date: new Date().toISOString().split('T')[0],
@@ -55,6 +55,9 @@ export const VisitationForm: React.FC<VisitationFormProps> = ({ user }) => {
         control,
         name: "visits"
     });
+
+    // Observar valores do formulário para garantir re-renderização
+    const watchedVisits = watch("visits");
 
     // Estados para Busca
     const [searchModalOpen, setSearchModalOpen] = useState(false);
@@ -113,6 +116,32 @@ export const VisitationForm: React.FC<VisitationFormProps> = ({ user }) => {
 
     const onSubmit: SubmitHandler<VisitationFormData> = (data) => {
         try {
+            // Validação: motivo da recusa obrigatório quando classificação for 'B'
+            const visitasComRecusaSemMotivo = data.visits.filter(v => 
+                v.controleVetorial?.classificacaoImovel === 'B' && 
+                (!v.controleVetorial?.motivoRecusa || v.controleVetorial.motivoRecusa.trim() === '')
+            );
+            
+            if (visitasComRecusaSemMotivo.length > 0) {
+                toast.error('Para classificação "B (Recusado)", o motivo da recusa é obrigatório.');
+                return;
+            }
+
+            // Validação: A+ deve ter depósitos com larvas
+            const visitasAPositivoSemLarvas = data.visits.filter(v => {
+                if (v.controleVetorial?.classificacaoImovel === 'A+') {
+                    const temLarvas = (v.controleVetorial.depositosInspecionados || []).some(d => d.comLarvas);
+                    return !temLarvas;
+                }
+                return false;
+            });
+
+            if (visitasAPositivoSemLarvas.length > 0) {
+                if (!confirm('Classificação A+ (Positivo para larvas) requer depósitos com larvas. Deseja continuar mesmo assim?')) {
+                    return;
+                }
+            }
+
             const hasEmptyAddresses = data.visits.some(v => !v.address || v.address.trim().length < 5);
             if (hasEmptyAddresses) {
                 if (!confirm('Algumas visitas estão sem endereço completo ou muito curto. Elas podem não aparecer no mapa. Deseja salvar mesmo assim?')) {
@@ -449,36 +478,39 @@ export const VisitationForm: React.FC<VisitationFormProps> = ({ user }) => {
                             </div>
 
                             {/* NOVO: Controle Vetorial DETALHADO */}
-                            {field.controleVetorial && (
+                            {(field.controleVetorial || watchedVisits[index]?.controleVetorial) && (
                                 <ControleVetorialSection
                                     visitIndex={index}
-                                    depositosInspecionados={field.controleVetorial?.depositosInspecionados || []}
+                                    depositosInspecionados={watchedVisits[index]?.controleVetorial?.depositosInspecionados || field.controleVetorial?.depositosInspecionados || []}
                                     onDepositosChange={(depositos) => {
-                                        setValue(`visits.${index}.controleVetorial.depositosInspecionados`, depositos);
+                                        setValue(`visits.${index}.controleVetorial.depositosInspecionados`, depositos, { shouldDirty: true });
                                     }}
-                                    depositosEliminados={field.controleVetorial?.depositosEliminados || 0}
+                                    depositosEliminados={watchedVisits[index]?.controleVetorial?.depositosEliminados ?? field.controleVetorial?.depositosEliminados ?? 0}
                                     onDepositosEliminadosChange={(value) => {
-                                        setValue(`visits.${index}.controleVetorial.depositosEliminados`, value);
+                                        setValue(`visits.${index}.controleVetorial.depositosEliminados`, value, { shouldDirty: true });
                                     }}
-                                    depositosTratados={field.controleVetorial?.depositosTratados || 0}
+                                    depositosTratados={watchedVisits[index]?.controleVetorial?.depositosTratados ?? field.controleVetorial?.depositosTratados ?? 0}
                                     onDepositosTratadosChange={(value) => {
-                                        setValue(`visits.${index}.controleVetorial.depositosTratados`, value);
+                                        setValue(`visits.${index}.controleVetorial.depositosTratados`, value, { shouldDirty: true });
                                     }}
-                                    larvicidaUtilizado={field.controleVetorial?.larvicidaUtilizado}
+                                    larvicidaUtilizado={watchedVisits[index]?.controleVetorial?.larvicidaUtilizado || field.controleVetorial?.larvicidaUtilizado}
                                     onLarvicidaChange={(value) => {
-                                        setValue(`visits.${index}.controleVetorial.larvicidaUtilizado`, value);
+                                        setValue(`visits.${index}.controleVetorial.larvicidaUtilizado`, value, { shouldDirty: true });
                                     }}
-                                    dosagem={field.controleVetorial?.dosagem || ''}
+                                    dosagem={watchedVisits[index]?.controleVetorial?.dosagem || field.controleVetorial?.dosagem || ''}
                                     onDosagemChange={(value) => {
-                                        setValue(`visits.${index}.controleVetorial.dosagem`, value);
+                                        setValue(`visits.${index}.controleVetorial.dosagem`, value, { shouldDirty: true });
                                     }}
-                                    classificacaoImovel={field.controleVetorial?.classificacaoImovel || 'C'}
+                                    classificacaoImovel={watchedVisits[index]?.controleVetorial?.classificacaoImovel || field.controleVetorial?.classificacaoImovel || 'C'}
                                     onClassificacaoChange={(value) => {
-                                        setValue(`visits.${index}.controleVetorial.classificacaoImovel`, value);
+                                        setValue(`visits.${index}.controleVetorial.classificacaoImovel`, value, { 
+                                            shouldValidate: true, 
+                                            shouldDirty: true 
+                                        });
                                     }}
-                                    motivoRecusa={field.controleVetorial?.motivoRecusa}
+                                    motivoRecusa={watchedVisits[index]?.controleVetorial?.motivoRecusa || field.controleVetorial?.motivoRecusa}
                                     onMotivoRecusaChange={(value) => {
-                                        setValue(`visits.${index}.controleVetorial.motivoRecusa`, value);
+                                        setValue(`visits.${index}.controleVetorial.motivoRecusa`, value, { shouldDirty: true });
                                     }}
                                 />
                             )}

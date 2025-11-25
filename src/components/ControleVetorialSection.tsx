@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus, Trash2, Droplets, AlertTriangle } from 'lucide-react';
+import { Plus, Trash2, Droplets, AlertTriangle, Info, CheckCircle2 } from 'lucide-react';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
@@ -88,6 +88,54 @@ export const ControleVetorialSection: React.FC<ControleVetorialSectionProps> = (
     };
 
     const totalLarvas = depositosInspecionados.filter(d => d.comLarvas).reduce((sum, d) => sum + d.quantidade, 0);
+    const temDepositosComLarvas = totalLarvas > 0;
+
+    // Mensagens informativas baseadas na classificação
+    const getMensagemClassificacao = (): { tipo: 'info' | 'warning' | 'error' | 'success'; mensagem: string } | null => {
+        switch (classificacaoImovel) {
+            case 'A+':
+                if (!temDepositosComLarvas) {
+                    return {
+                        tipo: 'warning',
+                        mensagem: '⚠️ Classificação A+ requer depósitos com larvas. Adicione depósitos e marque "Com larvas".'
+                    };
+                }
+                return {
+                    tipo: 'error',
+                    mensagem: '🔴 Imóvel positivo para larvas. Ações de controle devem ser registradas.'
+                };
+            case 'B':
+                if (!motivoRecusa || motivoRecusa.trim() === '') {
+                    return {
+                        tipo: 'warning',
+                        mensagem: '⚠️ O motivo da recusa é obrigatório para classificação B.'
+                    };
+                }
+                return {
+                    tipo: 'info',
+                    mensagem: 'ℹ️ Visita recusada pelo morador. Motivo registrado.'
+                };
+            case 'C':
+                return {
+                    tipo: 'info',
+                    mensagem: 'ℹ️ Imóvel fechado no momento da visita.'
+                };
+            case 'D1':
+                return {
+                    tipo: 'info',
+                    mensagem: 'ℹ️ Imóvel desabitado.'
+                };
+            case 'E':
+                return {
+                    tipo: 'info',
+                    mensagem: 'ℹ️ Estabelecimento comercial ou terreno baldio.'
+                };
+            default:
+                return null;
+        }
+    };
+
+    const mensagem = getMensagemClassificacao();
 
     return (
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 space-y-4">
@@ -108,7 +156,7 @@ export const ControleVetorialSection: React.FC<ControleVetorialSectionProps> = (
                             type="button"
                             onClick={() => onClassificacaoChange(value)}
                             className={`px-3 py-2 rounded-lg border-2 text-sm font-medium transition-all ${classificacaoImovel === value
-                                    ? `${color} border-current`
+                                    ? `${color} border-current font-semibold`
                                     : 'border-slate-200 bg-white hover:bg-slate-50'
                                 }`}
                         >
@@ -116,22 +164,50 @@ export const ControleVetorialSection: React.FC<ControleVetorialSectionProps> = (
                         </button>
                     ))}
                 </div>
+                
+                {/* Mensagem informativa baseada na classificação */}
+                {mensagem && (
+                    <div className={`mt-3 p-3 rounded-lg border flex items-start gap-2 ${
+                        mensagem.tipo === 'error' ? 'bg-red-50 border-red-200 text-red-800' :
+                        mensagem.tipo === 'warning' ? 'bg-yellow-50 border-yellow-200 text-yellow-800' :
+                        mensagem.tipo === 'success' ? 'bg-green-50 border-green-200 text-green-800' :
+                        'bg-blue-50 border-blue-200 text-blue-800'
+                    }`}>
+                        <Info className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                        <span className="text-sm">{mensagem.mensagem}</span>
+                    </div>
+                )}
             </div>
 
             {/* Motivo da Recusa (se B) */}
             {classificacaoImovel === 'B' && (
-                <div className="bg-yellow-50 p-3 rounded-lg border border-yellow-200">
+                <div className={`p-3 rounded-lg border ${
+                    !motivoRecusa || motivoRecusa.trim() === '' 
+                        ? 'bg-yellow-50 border-yellow-300' 
+                        : 'bg-yellow-50 border-yellow-200'
+                }`}>
                     <label className="block text-sm font-medium text-yellow-900 mb-2">
                         <AlertTriangle className="w-4 h-4 inline mr-1" />
-                        Motivo da Recusa
+                        Motivo da Recusa <span className="text-red-600">*</span>
                     </label>
                     <textarea
                         value={motivoRecusa || ''}
                         onChange={(e) => onMotivoRecusaChange(e.target.value)}
-                        className="w-full p-2 border border-yellow-300 rounded focus:ring-2 focus:ring-yellow-500"
+                        className={`w-full p-2 border rounded focus:ring-2 focus:ring-yellow-500 ${
+                            !motivoRecusa || motivoRecusa.trim() === ''
+                                ? 'border-yellow-400 border-2'
+                                : 'border-yellow-300'
+                        }`}
                         rows={2}
                         placeholder="Descreva o motivo da recusa..."
+                        required
                     />
+                    {motivoRecusa && motivoRecusa.trim() !== '' && (
+                        <div className="mt-2 flex items-center gap-1 text-green-700 text-xs">
+                            <CheckCircle2 className="w-3 h-3" />
+                            <span>Motivo registrado</span>
+                        </div>
+                    )}
                 </div>
             )}
 
